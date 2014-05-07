@@ -4,11 +4,11 @@
 def infothing
   file  = File.open("fat32.img",'r')
   contents = file.read
-  bytespersec = contents.unpack('@11h2h2 s< l< q< ')[3]
-  secperclus = contents.unpack('@13h2 s< l< q< ')[1]
-  rsvdseccnt = contents.unpack('@14h2H2 s< l< q< ')[2]
+  bytespersec = contents.unpack('@11h2h2 s< l< q< ')
+  secperclus = contents.unpack('@13h2 s< l< q< ')
+  rsvdseccnt = contents.unpack('@14h2H2 s< l< q< ')
   numFATS = contents.unpack('@16h2 s< l< q<')
-  fATSz32 = contents.unpack('@36h2h2h2h2 s< l< q<')
+  fATSz32 = contents.unpack('@36h2 s< l< q<')
   
   return bytespersec, secperclus, rsvdseccnt, numFATS, fATSz32 
 end
@@ -19,17 +19,17 @@ until i == 1 do
   case choice
   
   when 'info'
-    bps,spc,rsc = infothing
+    bps,spc,rsc, nFS, f32 = infothing
     puts "Bytes per sector:"
     p bps
     puts "Sectors per cluster:"
     p spc
     puts "Reserved sectors:"
     p rsc
-    puts "numfats"
-    p numFATS
-    puts "fATSz32"
-    p fATSZ32
+    puts "numfats is in here"
+    p nFS
+    puts "fATSz32 :"
+    p f32
   when 'size'
     puts "print size info"
   when 'cd'
