@@ -1,7 +1,17 @@
 #!/usr/bin/env ruby
 
-file = "test.txt"      # "fat32.img"
-
+#file = "test.txt"      # "fat32.img"
+def infothing
+  file  = File.open("fat32.img",'r')
+  contents = file.read
+  bytespersec = contents.unpack('@11h2h2 s< l< q< ')[3]
+  secperclus = contents.unpack('@13h2 s< l< q< ')[1]
+  rsvdseccnt = contents.unpack('@14h2H2 s< l< q< ')[2]
+  numFATS = contents.unpack('@16h2 s< l< q<')
+  fATSz32 = contents.unpack('@36h2h2h2h2 s< l< q<')
+  
+  return bytespersec, secperclus, rsvdseccnt, numFATS, fATSz32 
+end
 
 i = 0
 until i == 1 do
@@ -9,7 +19,17 @@ until i == 1 do
   case choice
   
   when 'info'
-    puts "this is the info"
+    bps,spc,rsc = infothing
+    puts "Bytes per sector:"
+    p bps
+    puts "Sectors per cluster:"
+    p spc
+    puts "Reserved sectors:"
+    p rsc
+    puts "numfats"
+    p numFATS
+    puts "fATSz32"
+    p fATSZ32
   when 'size'
     puts "print size info"
   when 'cd'
