@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
+
+
 def infothing
-  file  = File.open("fat32.img",'r')
+  file  = File.open("fat32.img",'rb+')
   contents = file.read
   bytespersec = contents.unpack('@11 S_ ')[0]
   secperclus = contents.unpack('@13 C ')[0]
@@ -18,30 +20,30 @@ def infothing
   @fATSz32 = fATSz32
   @rootClus = rootClus
   @rootEntCnt = rootEntCnt #should be zero
+
   return bytespersec, secperclus, rsvdseccnt, numFATS, fATSz32, rootClus, rootEntCnt
 end
 
-#FirstDataSector = BPB_ResvdSecCnt + (BPB_NumFATs * FATSz) + RootDirSectors
+def currentDir
+  firstDatasec = (@rsvdseccnt + (@numFATS * @fATSz32)) # + rootDirSec(which is 0)
+  #firstDatasec   2050
 
-# def datasec
-#   rootDirSec = [((@rootEntCnt * (32) + (@bytespersec - 1)))/ @bytespersec]
-#   p rootDirSec
-#   firstDatasec = (@rsvdseccnt + (@numFATS * @fATSz32) + rootDirSec)
-#   p firstDatasec
-#   firstSector = (((rootDirSec - 2) * @secperclus) + firstDatasec)
-#   p firstSector
-#   @sector = firstSector
-#   return firstSector
-# end
+  directoryAdd = (firstDatasec * @bytespersec)
+  #should be 2050 * 512
+  p directoryAdd
+  @current = directoryAdd
+
+end
 
 
-$filearray = []
-def openfile
-  if $filearray.include? $name
-    p $filearray
-  else
-    $filearray.push($name)
-  end
+$address = []
+
+def directory
+  file  = File.open("fat32.img",'rb')
+  contents = file.read(@current).unpack('@0 C11')
+  name = contents.pack('C*')
+  p name
+  $address.push(name)
 end
 
 
@@ -49,7 +51,7 @@ i = 0
 
 until i == 1 do
   choice = [(print '/]'), gets.rstrip][1]
-  # datasec
+
   case choice
 
   when 'info'
@@ -57,10 +59,12 @@ until i == 1 do
     puts "Bytes per sector: #{bps}"
     puts "Sectors per cluster: #{spc}"
     puts "Reserved sectors: #{rsc}"
-    puts "NumFATs: #{nFS} "
+    puts "NumFATs: #{nFS}"
     puts "FATSz32: #{f32}"
     puts "Root Cluster: #{rcl}"
-    puts "root ent count: #{rec} "
+    puts "root ent count: #{rec}"
+
+    # opening
 
   when 'size'
     puts "print size info"
@@ -69,13 +73,13 @@ until i == 1 do
     puts "this should change directory"
 
   when 'ls'
+    infothing
     puts "this should show all directories"
-
+    currentDir
+    directory
   when 'open'
-    #$name = [(print '::'), gets.rstrip][1]
-    #openfile
-
-
+    # $name = [(print '::'), gets.rstrip][1]
+    # openfile
 
   when 'close'
     puts "closing file"
@@ -86,6 +90,11 @@ until i == 1 do
   when 'exit'
     puts "Shutting down now"
    i = 1
+
+ when 'x'
+    puts "Shutting down now"
+   i = 1
+
 
   else
     puts "thats not a usable arg"
