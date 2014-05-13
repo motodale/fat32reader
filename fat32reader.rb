@@ -1,8 +1,9 @@
 #!/usr/bin/env ruby
 require 'readline'
 $address = []
+$filelist = []
 $openedfiles = []
-
+$deletepile = []
 
 def infothing
   file  = File.open("fat32.img",'rb+')
@@ -24,29 +25,29 @@ def infothing
   @rootEntCnt = rootEntCnt #should be zero
 
   return bytespersec, secperclus, rsvdseccnt, numFATS, fATSz32, rootClus, rootEntCnt
+
+
+  # Convert a given 4 byte integer from little-endian to the running
+  # machine's native endianess.  The pack('V') operation takes the
+  # given number and converts it to little-endian (which means that
+  # if the machine is little endian, no conversion occurs).  On a
+  # big-endian machine, the pack('V') will swap the bytes because
+  # that's what it has to do to convert from big to little endian.
+  # Since the number is already little endian, the swap has the
+  # opposite effect (converting from little-endian to big-endian),
+  # which is what we want. In both cases, the unpack('l') just
+  # produces a signed integer from those bytes, in the machine's
+  # native endianess.
 end
-
-#globals for use anywher
-
-# $bytespersec = @bytespersec
-# $secperclus = @secperclus
-# $rsvdseccnt = @rsvdseccnt
-# $numFATS = @numFATS
-# $fATSz32 = @fATSz32
-# $rootClus = @rootClus
-# $rootEntCnt = @rootEntCnt
-
-
-
 
 
 def currentDir
   firstDatasec = (@rsvdseccnt + (@numFATS * @fATSz32)) # + rootDirSec(which is 0)
-  #firstDatasec   2050
+
 
   directoryAdd = (firstDatasec * @bytespersec)
   #should be 2050 * 512
-  #p directoryAdd
+
   $current = directoryAdd
 end
 
@@ -64,45 +65,36 @@ def getDir
 end
 
 
-
 def directory
   file  = File.open("fat32.img",'rb')
   file.seek($current, IO::SEEK_SET)
 
   name = file.readlines('fat32.img')
+  newname = name[0]
+  newname.each do |item|
+    if item.to_s.match(/\\x00([a-zA-Z]){1}|\\x0F([a-zA-Z]){1}|(\.)/)
+      newname.remove(item)
+    else
+      $address.push(item)
+    end
+  end
 
-  newname = name[0].gsub(/\s.*/, '')
+  p newname
 
-  $address.push(newname)
+
 end
+
+#\\x00([a-zA-Z]){1}|\\x0F([a-zA-Z]){1}|(\.)
+
+#$address.push(newname)
 
 
 def getSize
   file  = File.open("fat32.img",'rb')
-  contents = file.seek(-1, IO::SEEK_END)
+
+  contents = file.seek($current, IO::SEEK_SET)
   p contents
 end
-
-
-# Have it take in the CurrentDirAddr.  The first thing ls should do is
-# seek to that address.  Now you are sitting at the beginning of some
-# directory.
-#
-# Take a look at the FAT32 Spec starting at the middle of page 22.  We
-# need to figure out how to *read* the directories so that we can print
-# the name of the files and directories inside.
-#
-# Each directory is broken up into 32-byte chunks of information called
-# directory entries.  Each directory entry has an attribute telling you
-# what is there -- a file?  A directory?  A volume ID?  Page 23 will show
-# you a table of how directory entries are laid out.  (If the attribute is
-# a long name, just skip that entry and move onto the next 32-byte
-# entry.)  If the attributes tells you the entry holds a file or
-# directory, print the short name to the user and move onto the next
-# directory entry.
-
-
-
 
 
 def openstuff
@@ -138,8 +130,11 @@ end
 
 
 
+#http://www.ruby-doc.org/stdlib-2.1.1/libdoc/readline/rdoc/Readline.html
+#the website used for the prompt with shell code, including memory of inputs
+
 LIST = [
-  'info','cd', 'ls', 'open', 'close','read', 'exit', 'x'
+  'info' ,'cd' ,'ls' ,'size' ,'open' ,'close' ,'read' ,'exit' ,'x'
 ].sort
 
 comp = proc { |s| LIST.grep(/^#{Regexp.escape(s)}/) }
@@ -152,10 +147,6 @@ trap('INT') { system('stty', stty_save); exit }
 
 
   while choice = Readline.readline("/] ", true)
-  #i = 0
-
-  #until i == 1 do
-    #choice = [(print '/]'), gets.rstrip][1]
 
     case choice
 
@@ -170,6 +161,10 @@ trap('INT') { system('stty', stty_save); exit }
       puts "root ent count: #{rec}"
 
     when 'size'
+      infothing
+      currentDir
+      directory
+      getDir
       getSize
 
     when 'cd'
@@ -177,7 +172,6 @@ trap('INT') { system('stty', stty_save); exit }
 
     when 'ls'
       infothing
-      puts "this should show all directories"
       currentDir
       count = 0
       file = File.open('fat32.img','r')
